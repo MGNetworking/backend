@@ -4,6 +4,7 @@
 * [Setup](#setup)
   * [Before Run](#Before-Run)
   * [Submodule](#Submodule)
+  * [Run](#run)
 
 ## General info
 
@@ -19,10 +20,14 @@ Par exemple le script `version.sh`, il a besoin d'installer l'utilitaire `xmlsta
 uniquement dans les environnements `linux`.
 
 ### Submodule
-La commande `git submodule init`   
-est utilisée pour initialiser les sous-modules d'un référentiel Git
+
+```shell
+git submodule init
+```
+Cette commande est utilisée pour initialiser les sous-modules d'un référentiel Git
 Lorsque vous exécutez cette commande, Git recherche les informations des sous-modules
 dans le fichier `.gitmodules` du référentiel principal.
+
 Elle configure les sous-modules enregistrés dans le fichier `.gitmodules` pour être suivis
 et utilisés dans le référentiel principal.
 
@@ -31,25 +36,35 @@ C'est pourquoi vous devez également exécuter la commande `git submodule update
 sous-modules.
 
 ```shell
-git submodule init
+git submodule update --recursive --remote
 ```
 
-La commande `git submodule update`   
-est utilisée pour mettre à jour les fichiers des sous-modules
-après leur initialisation.
-Lorsque vous exécutez cette commande, Git récupère les fichiers des sous-modules en fonction des informations
-enregistrées dans le
-référentiel principal.
+Cette commande met à jour tous les sous-modules du projet vers les derniers commits de leur branche par défaut dans le 
+référentiel distant.
 
-Elle récupère les révisions spécifiées pour les sous-modules
-et place les fichiers des sous-modules aux emplacements appropriés dans le répertoire
-du référentiel principal. Cela vous permet d'obtenir les fichiers actuels
-des sous-modules et de les utiliser dans votre projet principal.
+L'option `--recursive` est utilisée pour mettre à jour tous les sous-modules récursivement.
+L'option `--remote` indique à Git de récupérer les derniers commits du référentiel distant plutôt que de rester sur les 
+commits spécifiés dans le fichier `.gitmodules`
 
 ```shell
 git submodule update
 ```
 
+Cette commande met à jour tous les sous-modules du projet vers les commits spécifiés dans le fichier `.gitmodules`.
+
+Il ne récupère pas automatiquement les derniers commits du référentiel distant.
+
+```shell
+git pull origin master
+```
+Cette commande met à jour le répertoire principal en récupérant les modifications de la branche `master` du référentiel 
+distant du répertoire principal.
+
+Si vous avez mis à jour vos sous-modules avec `git submodule update --recursive --remote` et que vous avez effectué des 
+modifications dans le répertoire principal, vous pouvez envisager d'effectuer un `git pull origin master` pour récupérer 
+les dernières modifications de la branche "master" du référentiel distant du répertoire principal
+
+### Run
 Pour lancer le docker compose principale, vous devez utiliser le script `init.sh`
 Ce script contient le processus complet permettent d'initialiser les variables contenus
 dans le fichier .env situé à la racine du projet.
