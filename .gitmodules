@@ -1,0 +1,20 @@
+[submodule "ms-configuration"]
+	path = ms-configuration
+	url = git@github.com:MGNetworking/ms-configuration.git
+	branch = dev
+[submodule "ms-article"]
+	path = ms-article
+	url = git@github.com:MGNetworking/ms-article.git
+	branch = dev
+[submodule "ms-gateway"]
+	path = ms-gateway
+	url = git@github.com:MGNetworking/ms-gateway.git
+	branch = dev
+[submodule "ms-eureka"]
+	path = ms-eureka
+	url = git@github.com:MGNetworking/ms-eureka.git
+	branch = dev
+[submodule "properties-file-blog"]
+	path = properties-file-blog
+	url = git@github.com:MGNetworking/properties-file-blog.git
+	branch = dev

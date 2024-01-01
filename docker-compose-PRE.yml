@@ -1,0 +1,99 @@
+version: '3.9'
+services:
+
+  # config-service
+  config-service:
+    container_name: config-service
+    restart: always
+    image: ms-configuration-service:${version_config:-latest}
+    build:
+      context: ms-configuration/
+      dockerfile: dockerfile
+    env_file:
+      - ms-configuration/docker/.env
+    ports:
+      - 8089:8089
+    networks:
+      - spring-network
+
+  # eureka
+  eureka-service:
+    depends_on:
+      - config-service
+    container_name: eureka-service
+    image: ms-eureka-service:${version_eureka:-latest}
+    restart: always
+    build:
+      context: ms-eureka/
+      dockerfile: dockerfile
+      args:
+        - CONFIG_SERVICE_URI_ARG=${IP_PRE}
+        - env_profile=${env_PRE}
+    env_file:
+      - .env
+    ports:
+      - 8099:8099
+    environment:
+      - SPRING_PROFILES_ACTIVE=${env_PRE}
+      - CONFIG_SERVICE_URI=${IP_PRE}
+    networks:
+      - spring-network
+
+  # gateway-service
+  gateway-service:
+    depends_on:
+      - eureka-service
+    container_name: gateway-service
+    image: ms-gateway-service:${version_gateway:-latest}
+    restart: always
+    build:
+      context: ms-gateway/
+      dockerfile: dockerfile
+      args:
+        - CONFIG_SERVICE_URI_DEV=${IP_PRE}
+        - env_profile=${env_PRE}
+    env_file:
+      - .env
+    ports:
+      - 8077:8077
+    environment:
+      - SPRING_PROFILES_ACTIVE=${env_PRE}
+      - CONFIG_SERVICE_URI=${IP_PRE}
+      - eureka.client.service-url.defaultZone=${eureka_Zone}
+    networks:
+      - spring-network
+
+  # article
+  article-service:
+    depends_on:
+      - eureka-service
+    container_name: article
+    restart: always
+    image: ms-article-service:${version_article:-latest}
+    env_file:
+      - .env
+    build:
+      context: ms-article/
+      dockerfile: dockerfile
+      args:
+        - CONFIG_SERVICE_URI_ARG=${IP_PRE}
+        - env_profile=${env_PRE}
+    deploy:
+      replicas: 1
+    ports:
+      - "0:9010"
+      # volumes:
+      # Path absolut pour l'échange des fichiers
+      #- ./$PWD TODO dossier local:/blog/images:rw
+    environment:
+      - SPRING_PROFILES_ACTIVE=${env_PRE}
+      - CONFIG_SERVICE_URI=${IP_PRE}
+      - eureka.client.service-url.defaultZone=${eureka_Zone}
+    networks:
+      - spring-network
+
+networks:
+  keycloak_postgre:
+    name: sso_bd
+    external: true  # indic qu'il est déjà present
+    driver: bridge  # Réseau docker isolé
