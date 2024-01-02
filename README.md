@@ -65,6 +65,19 @@ modifications dans le répertoire principal, vous pouvez envisager d'effectuer u
 les dernières modifications de la branche "master" du référentiel distant du répertoire principal
 
 ### Run
+
+les scripts pour fonction ont besoin des tools suivant 
+
+```shell
+sudo apt install xmlstarlet
+sudo apt install net-tools
+```
+
+Rendre les scripts exécutable 
+```shell
+chmod -R +x script/
+```
+
 Pour lancer le docker compose principale, vous devez utiliser le script `init.sh`
 Ce script contient le processus complet permettent d'initialiser les variables contenus
 dans le fichier .env situé à la racine du projet.
