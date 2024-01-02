@@ -7,7 +7,7 @@
 # pour le script Get_IP_Config_Service.sh et aide a déterminer l'environnement
 IP_ENV=$1
 dockerCompose="docker-compose-DEV.yml"
-name_conteneur=("config-service" "eureka-service" "gateway-service")
+name_conteneur=("config" "eureka" "gateway" "article")
 
 # permet de déterminer l'environnement
 run_env() {

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-name_conteneur=("config-service" "eureka" "gateway-service")
-name_images=("ms-configuration-service" "ms-eureka-service" "ms-gateway-service")
+name_conteneur=("config" "eureka" "gateway" "article")
+name_images=("ms-configuration-service" "ms-eureka-service" "ms-gateway-service" "ms-article-service")
 nom_reseau="blog-network"
 
 delete_images() {
@@ -50,7 +50,7 @@ docker compose -f ./docker-compose-DEV.yml down
 for contener in "${name_conteneur[@]}"; do
 
   # Vérifier si le conteneur n'est plus en cours d'exécution
-  if [[ -z "$(docker ps -q -f 'status=exited' -f 'name='$contener)" ]]; then
+  if [[ -z "$(docker ps -q --filter 'name='$contener)" ]]; then
 
     echo "************************************"
     echo "Le conteneur $contener n'est plus en cours d'exécution."
