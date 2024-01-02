@@ -2,8 +2,8 @@ version: '3.9'
 services:
 
   # config-service
-  config-service:
-    container_name: config-service
+  config:
+    container_name: config
     restart: always
     image: ms-configuration-service:${version_config:-latest}
     build:
@@ -17,10 +17,10 @@ services:
       - keycloak_postgre
 
   # eureka
-  eureka-service:
+  eureka:
     depends_on:
-      - config-service
-    container_name: eureka-service
+      - config
+    container_name: eureka
     image: ms-eureka-service:${version_eureka:-latest}
     restart: always
     build:
@@ -40,10 +40,10 @@ services:
       - keycloak_postgre
 
   # gateway-service
-  gateway-service:
+  gateway:
     depends_on:
-      - eureka-service
-    container_name: gateway-service
+      - eureka
+    container_name: gateway
     image: ms-gateway-service:${version_gateway:-latest}
     restart: always
     build:
@@ -64,9 +64,9 @@ services:
       - keycloak_postgre
 
   # article
-  article-service:
+  article:
     depends_on:
-      - eureka-service
+      - eureka
     container_name: article
     restart: always
     image: ms-article-service:${version_article:-latest}
