@@ -11,12 +11,11 @@ delete_images() {
   docker images -f "reference=$1"
 
   if [[ $? -eq 0 ]]; then
-    echo "************************************"
     echo "L'images : $1:$VERSION_IMAGE a bien été supprimer "
   else
-    echo "************************************"
     echo "L'images : $1:$VERSION_IMAGE n'a pas été supprimer "
   fi
+  echo "************************************"
 }
 
 delete_reseau() {
@@ -61,6 +60,7 @@ for contener in "${name_conteneur[@]}"; do
   fi
 
 done
+echo "************************************"
 
 ######### pour chaque images
 for image in "${name_images[@]}"; do
@@ -72,14 +72,18 @@ for image in "${name_images[@]}"; do
   if [[ $(docker images -q $image:$tag) != "" ]]; then
     delete_images $image:$tag
   else
-    echo "************************************"
     echo "L'images : $image:$tag a déjà était supprimer "
+    echo "************************************"
   fi
 
 done
 
 ###### supression du réseau
-delete_reseau $nom_reseau
+#delete_reseau $nom_reseau
+
+echo "************************************"
+echo "Suppression des images Docker sans étiquette "
+docker image prune -f
 
 # affichage
 echo "************************************"
