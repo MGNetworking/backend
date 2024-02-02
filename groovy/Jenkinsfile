@@ -1,0 +1,201 @@
+pipeline {
+    agent any
+
+    environment {
+        // Définition des variables d'environnement
+        CONTAINER_NAME = "configuration"
+        DOMAIN_REGISTRY = "registry-nas.backhole.ovh"
+        DOCKER_IMAGE_NAME = "registry-nas.backhole.ovh/config-service"
+
+        DOCKERFILE_PATH = "./dockerfile"
+        DOCKER_COMPOSE_FILE = "./docker/docker-compose-nas.yml"
+
+        STATUS = ""
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                // pour phase de test dans Jenkins
+                checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'be940d78-176b-4584-920d-5d5fb2902fea', url: 'git@github.com:MGNetworking/ms-configuration.git']])
+            }
+        }
+
+        // Ce bloc test si le conteneur cible est en cours d'exe
+        // et récupére la valeur de la version
+        stage('Load Environment Variables') {
+            steps {
+                script {
+
+                    echo "Chargement des fichier de configuration"
+                    load('./docker/.env')
+                    load('./docker/.env_rollback')
+
+                    echo "Nouvelle version de l'application : ${version}"
+                    echo "Ancienne version de l'application : ${version_old}"
+                    echo "Le port externe : ${port}"
+                    echo "Le Path : ${WORKSPACE}"
+
+                }
+            }
+        }
+
+        //
+        stage('Stop conteneur & clean setUp') {
+            steps {
+                script {
+
+                    // Vérifier si le conteneur est en cours d'exécution
+                    String isContainerRunning = sh(script: "docker ps -q -f name=${CONTAINER_NAME}", returnStdout: true)
+                    echo "isContainerRunning : ${isContainerRunning}"
+
+                    if (!isContainerRunning.isEmpty()) {
+
+                        echo "Le conteneur ${CONTAINER_NAME} est en cours d'exécution."
+                        sh "docker container stop ${CONTAINER_NAME}"
+                        sh 'docker system prune -f'
+
+                    } else {
+                        echo "Le conteneur ${CONTAINER_NAME} n'est pas en cours d'exécution."
+                        sh 'docker system prune -f'
+                    }
+                }
+            }
+        }
+
+
+        // Dans tout les cas , Un build de l'images
+        stage('Build images ') {
+            steps {
+                script {
+                    // Construire l'image Docker en utilisant le Dockerfile
+                    def buildOutput = sh(script: "docker build --no-cache " +
+                            "--build-arg port=${port} " +
+                            "--build-arg APP_VERSION=${version} " +
+                            "-t ${env.DOCKER_IMAGE_NAME}:${version} " +
+                            "-f ${env.DOCKERFILE_PATH} .", returnStatus: true, returnStdout: true)
+
+                    // Afficher la sortie de la construction de l'image
+                    echo "Build Output: ${buildOutput}"
+
+                    // Si la construction a échoué, afficher les logs d'erreur
+                    if (buildOutput != 0) {
+                        error("Failed to build Docker image.")
+                    }
+                }
+            }
+        }
+
+
+        stage('start container ') {
+            steps {
+                script {
+
+                    // Vérifiez si le service existe et est en cours d'exécution
+                    def serviceExists = sh(script: "/usr/bin/docker compose -f ${WORKSPACE}/docker/docker-compose-nas.yml ps -q ${CONTAINER_NAME}", returnStatus: true)
+
+                    // Si le service existe et est en cours d'exécution, alors arrêtez et supprimez les conteneurs
+                    if (serviceExists == 0) {
+                        sh 'docker compose -f ./docker/docker-compose-nas.yml down'
+                    } else {
+                        echo 'Aucun conteneur du service trouvé. Pas besoin de s\'arrêter.'
+                    }
+
+                    // lance les services et attend qu'il soit tous lancer
+                    sh 'docker compose -f ./docker/docker-compose-nas.yml up -d --no-color --wait'
+                }
+            }
+        }
+
+
+        stage('Teste API') {
+            steps {
+                script {
+                    String apiUrl = "http://172.23.0.2:8089/gateway/dev" // IP interne au context Docker
+                    int Delay = 10          // en secondes
+                    int maxRetries = 4      // nombre de tentaive -1
+                    def responseCode
+                    int retries = 1
+
+                    echo "Temps d'attente configurer ${Delay} secondes avant de commencer les requêtes de testing."
+                    echo "En attente du statut 200 pour l'URL : ${apiUrl}"
+
+                    def CURL = sh(script: 'which curl', returnStdout: true).trim()
+                    def requete_curl = "${CURL} -s -o /dev/null -w '%{http_code}' --max-time 10 ${apiUrl}"
+
+                    echo "Attente supplémentaire avant le test de l'API"
+                    sleep 10
+
+                    // Boucle jusqu'à ce que le statut 200 soit atteint ou que le nombre maximal de tentatives soit dépassé
+                    while (retries < maxRetries) {
+
+                        try {
+                            echo("Tentative n° ${retries}")
+                            responseCode = sh(script: "/usr/bin/curl -s -o /dev/null -w '%{http_code}' --max-time 10 ${apiUrl}", returnStdout: true).trim()
+                            echo("Code de réponse : ${responseCode}")
+
+                            if (Integer.parseInt(responseCode) == 200) {
+                                echo("La requête a réussi avec le statut ${responseCode}. est nombre de tentative n° ${retries}")
+                                break;
+                            } else {
+                                retries++
+                                echo("Nombre de tentative de requête ${retries}")
+                                sleep Delay // Attente en seconde avant la prochaine tentative
+                            }
+                        } catch (Exception e) {
+                            echo("Exception : ${e}")
+                            echo("ResponseCode : ${responseCode}")
+
+                            retries++
+                            echo("Nombre de tentative de requête ${retries}")
+                            sleep Delay // Attente en seconde avant la prochaine tentative
+                        }
+                    }
+
+                    // Si le nombre maximal de tentatives est dépassé, marquez la construction comme échec
+                    if (maxRetries == retries) {
+                        error("La requête n'a pas réussi à atteindre le statut 200 après plusieurs tentatives.")
+                    }
+
+
+                }
+            }
+        }
+
+        stage('Push image Docker registry') {
+            steps {
+                sh """ 
+                    docker login -u maxime -p max ${env.DOMAIN_REGISTRY}
+                    echo push images ${env.DOCKER_IMAGE_NAME}:${version}
+                    docker push ${env.DOCKER_IMAGE_NAME}:${version}
+                    """
+            }
+        }
+
+    }
+
+    post {
+        always {
+            echo "Fin de la mise en service"
+        }
+        success {
+            echo 'La mise en service à été réussi.'
+            script {
+                STATUS = sh(script: "docker inspect -f '{{.State.Status}}' ${CONTAINER_NAME}", returnStdout: true)
+                echo "Status du conteneur ${CONTAINER_NAME} : ${STATUS} "
+                echo "docker logout ${DOMAIN_REGISTRY}"
+            }
+        }
+        failure {
+
+            echo 'Échec de la mise en service, Rollback en cours'
+
+            // Rollback
+            sh "docker pull ${env.DOCKER_IMAGE_NAME}:${version_old}"
+            sh 'docker compose -f ./docker/docker-compose-rollback.yml up -d --no-color --wait'
+            sh "docker logout ${DOMAIN_REGISTRY}"
+        }
+    }
+
+}
