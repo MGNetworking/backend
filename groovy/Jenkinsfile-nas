@@ -1,3 +1,5 @@
+//@Library('JenkinsSharedLibrary') _
+
 pipeline {
     agent any
 
@@ -16,35 +18,37 @@ pipeline {
     }
 
     stages {
+        fonction.
+                // Récupére l'adresse IP
+                        stage('Get IP Gateway') {
+                    steps {
+                        script {
 
-        // Récupére l'adresse IP
-        stage('Get IP Gateway') {
-            steps {
-                script {
+                            def fonction = load './groovy/jenkinsfonction.groovy'
 
-                    // recherche de l'identifiant réseau sso_bd
-                    String network = sh(script: "docker network ls -qf name=${env.DOCKER_RESEAU}", returnStdout: true).trim()
+                            // recherche de l'identifiant réseau sso_bd
+                            String network = sh(script: "docker network ls -qf name=${env.DOCKER_RESEAU}", returnStdout: true).trim()
 
-                    if (!network.isEmpty()){
+                            if (!network.isEmpty()) {
 
-                        // recupération de la paresselle de sous réseau sso_bd
-                        IP_Gateway = sh(script: "docker network inspect -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}' $network", returnStdout: true).trim()
+                                // recupération de la paresselle de sous réseau sso_bd
+                                IP_Gateway = sh(script: "docker network inspect -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}' $network", returnStdout: true).trim()
 
-                        IP_Host = sh(script: "")
+                                IP_Host = sh(script: "")
 
-                        // construction de l'URI
-                        DOCKER_GATEWAY = "http://${IP_Gateway}:8089"
-                        echo "IP Gateway  ${env.DOCKER_RESEAU} => ${DOCKER_GATEWAY}"
+                                // construction de l'URI
+                                DOCKER_GATEWAY = "http://${IP_Gateway}:8089"
+                                echo "IP Gateway  ${env.DOCKER_RESEAU} => ${DOCKER_GATEWAY}"
 
-                    }else {
-                        // signale l'erreur est interromps le processus
-                        error = "Le réseau Docker ${env.DOCKER_RESEAU} n'a pas été trouvé."
+                            } else {
+                                // signale l'erreur est interromps le processus
+                                error = "Le réseau Docker ${env.DOCKER_RESEAU} n'a pas été trouvé."
+                            }
+
+                        }
                     }
 
                 }
-            }
-
-        }
 
         // Ce bloc test si le conteneur cible est en cours d'exe
         // et récupére la valeur de la version
