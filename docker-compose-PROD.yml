@@ -96,5 +96,4 @@ services:
 networks:
   keycloak_postgre:
     name: sso_bd
-    external: true  # indic qu'il est déjà present
     driver: bridge  # Réseau docker isolé
