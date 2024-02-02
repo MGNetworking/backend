@@ -1,6 +1,6 @@
 #!/bin/bash
 
-name_conteneur=("config" "eureka" "gateway" "article")
+name_conteneur=("ms-configuration" "ms-eureka" "ms-gateway" "ms-article")
 name_images=("ms-configuration-service" "ms-eureka-service" "ms-gateway-service" "ms-article-service")
 
 delete_images() {
