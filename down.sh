@@ -2,7 +2,6 @@
 
 name_conteneur=("config" "eureka" "gateway" "article")
 name_images=("ms-configuration-service" "ms-eureka-service" "ms-gateway-service" "ms-article-service")
-nom_reseau="blog-network"
 
 delete_images() {
 
@@ -16,31 +15,6 @@ delete_images() {
     echo "L'images : $1:$VERSION_IMAGE n'a pas été supprimer "
   fi
   echo "************************************"
-}
-
-delete_reseau() {
-
-  # Vérifie si le conteneur est actif
-  if docker ps -f "network=$1" -f "status=running" --format '{{.ID}}' | grep -q .; then
-    echo "************************************"
-    echo "Un conteneur est toujours actif sur le réseau bridge $1"
-    echo "Le réseau $1 ne pourra pas être supprimer."
-  else
-    echo "************************************"
-    echo "Les conteneurs ne sont plus actif sur le réseau bridge  $1"
-    echo "Le réseau  $1 peut être supprimer "
-    docker network rm $1
-    docker network ls --filter "name=$1"
-
-    if [[ $? -eq 0 ]]; then
-      echo "************************************"
-      echo "Le réseau a été supprimé avec succès."
-    else
-      echo "************************************"
-      echo "Échec de la suppression du réseau  $1"
-    fi
-  fi
-
 }
 
 docker compose -f ./docker-compose-DEV.yml down
@@ -78,12 +52,9 @@ for image in "${name_images[@]}"; do
 
 done
 
-###### supression du réseau
-#delete_reseau $nom_reseau
-
 echo "************************************"
 echo "Suppression des images Docker sans étiquette "
-docker image prune -f
+docker image prune -f -a
 
 # affichage
 echo "************************************"

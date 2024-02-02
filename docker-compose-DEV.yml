@@ -1,99 +1,100 @@
 version: '3.9'
 services:
 
-  # config-service
-  config:
-    container_name: config
-    restart: always
+  ms-configuration:
+    container_name: ms-configuration
     image: ms-configuration-service:${version_config:-latest}
-    build:
-      context: ms-configuration/
-      dockerfile: dockerfile
+    restart: always
     env_file:
-      - ms-configuration/docker/.env
+      - .env
+    build:
+      context: ms-configuration/.
+      dockerfile: Dockerfile
     ports:
-      - 8089:8089
+      - "8089:8089"
     networks:
       - keycloak_postgre
 
-  # eureka
-  eureka:
+  ms-eureka:
     depends_on:
-      - config
-    container_name: eureka
+      - ms-configuration
+    container_name: ms-eureka
     image: ms-eureka-service:${version_eureka:-latest}
     restart: always
-    build:
-      context: ms-eureka/
-      dockerfile: dockerfile
-      args:
-        - CONFIG_SERVICE_URI_ARG=${IP_DEV}
-        - env_profile=${env_DEV}
     env_file:
       - .env
+    build:
+      context: ms-eureka/.
+      dockerfile: Dockerfile
+      args: # pour la construction de l'image
+        - SPRING_PROFILES_ACTIVE=${profile_actif_dev}
+        - CONFIG_SERVICE_URI_host=${service_config_host_dev}
     ports:
-      - 8099:8099
-    environment:
-      - SPRING_PROFILES_ACTIVE=${env_DEV}
-      - CONFIG_SERVICE_URI=${IP_DEV}
+      - "8099:8099"
+    environment: # pour la construction du conteneur
+      - SPRING_PROFILES_ACTIVE=${profile_actif_dev}
+      - CONFIG_SERVICE_URI_docker=${service_config_docker}
+
     networks:
       - keycloak_postgre
 
-  # gateway-service
-  gateway:
+  ms-gateway:
     depends_on:
-      - eureka
-    container_name: gateway
+      - ms-configuration
+    container_name: ms-gateway
     image: ms-gateway-service:${version_gateway:-latest}
     restart: always
-    build:
-      context: ms-gateway/
-      dockerfile: dockerfile
-      args:
-        - CONFIG_SERVICE_URI_DEV=${IP_DEV}
-        - env_profile=${env_DEV}
     env_file:
       - .env
+    build:
+      context: ms-gateway
+      dockerfile: Dockerfile
+      args: # pour la construction de l'image
+        - SPRING_PROFILES_ACTIVE=${profile_actif_dev}
+        - CONFIG_SERVICE_URI_host=${service_config_host_dev}
     ports:
-      - 8077:8077
-    environment:
-      - SPRING_PROFILES_ACTIVE=${env_DEV}
-      - CONFIG_SERVICE_URI=${IP_DEV}
-      - eureka.client.service-url.defaultZone=${eureka_Zone}
+      - "8077:8077"
+    environment: # pour la construction du conteneur
+      - SPRING_PROFILES_ACTIVE=${profile_actif_dev}
+      - CONFIG_SERVICE_URI_docker=${service_config_docker}
     networks:
       - keycloak_postgre
+  #    healthcheck: # test l'état de santé
+  #      test: [ "CMD", "curl", "-f", "http://${service_config_dev}/actuator/health" ]
+  #      interval: 30s
+  #      timeout: 10s
+  #      retries: 5
 
-  # article
-  article:
+  ms-article:
     depends_on:
-      - eureka
-    container_name: article
+      - ms-configuration
+    container_name: ms-article
     restart: always
     image: ms-article-service:${version_article:-latest}
     env_file:
       - .env
     build:
-      context: ms-article/
-      dockerfile: dockerfile
-      args:
-        - CONFIG_SERVICE_URI_ARG=${IP_DEV}
-        - env_profile=${env_DEV}
+      context: ms-article
+      dockerfile: Dockerfile
+      args: # pour la construction de l'image
+        - SPRING_PROFILES_ACTIVE=${profile_actif_dev}
+        - CONFIG_SERVICE_URI_host=${service_config_host_dev}
     deploy:
       replicas: 1
     ports:
-      - "0:9010"
-      # volumes:
-      # Path absolut pour l'échange des fichiers
-      #- ./$PWD TODO dossier local:/blog/images:rw
-    environment:
-      - SPRING_PROFILES_ACTIVE=${env_DEV}
-      - CONFIG_SERVICE_URI=${IP_DEV}
-      - eureka.client.service-url.defaultZone=${eureka_Zone}
+      - "9010:9010"
+    environment: # pour la construction du conteneur
+      - SPRING_PROFILES_ACTIVE=${profile_actif_dev}
+      - CONFIG_SERVICE_URI_docker=${service_config_docker}
     networks:
       - keycloak_postgre
+#    healthcheck: # test l'état de santé
+#      test: [ "CMD", "curl", "-f", "http://${service_config_dev}/actuator/health" ]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
 
 networks:
   keycloak_postgre:
     name: sso_bd
-    external: true  # indic qu'il est déjà present
     driver: bridge  # Réseau docker isolé
