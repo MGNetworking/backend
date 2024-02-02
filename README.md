@@ -161,3 +161,38 @@ image respective.
 ./script/down.sh 
 ```
 
+Pour arrêter un service `de manière distinct` qui a été lancé avec le `docker compose` principale
+
+```shell
+docker compose -f docker-compose-DEV.yml stop article
+```
+
+Puis pour le supprimer
+
+```shell
+docker compose -f docker-compose-DEV.yml rm -s -f article
+```
+
+`les options`   
+Dans cette commande, `l'option -s` est utilisée pour arrêter le service avant de le supprimer, et `l'option -f` force la
+suppression du service même s'il est en cours d'exécution.
+
+Si vous avez arrêté le service `article` et que vous souhaitez le redémarrer en reconstruisant l'image, vous pouvez
+utiliser la commande docker compose up avec la sous commande `build` pour forcer la reconstruction de l'image.
+Voici comment vous pouvez le faire :
+
+```shell
+# build 
+docker compose -f docker-compose-DEV.yml build --no-cache article
+
+# puis run
+docker compose -f docker-compose-DEV.yml up -d article
+```
+
+`les options`
+l'option `--no-cache` dans la commande de construction (docker compose build) est utilisée pour forcer la reconstruction
+sans utiliser le cache des couches d'image. Cela signifie que toutes les étapes de construction seront exécutées à
+partir de zéro, même si les étapes précédentes sont en cache.
+
+Dans cet exemple, je stoppe et supprime le service article, puis, je build l'image et créer le conteneur en
+utilisant le docker compose principal, qui respecter l'ordre des dépendances entre conteneur 

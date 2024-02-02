@@ -1,99 +1,99 @@
 version: '3.9'
 services:
 
-  # config-service
-  config-service:
-    container_name: config-service
-    restart: always
+  ms-configuration:
+    container_name: ms-configuration
     image: ms-configuration-service:${version_config:-latest}
-    build:
-      context: ms-configuration/
-      dockerfile: dockerfile
+    restart: always
     env_file:
-      - ms-configuration/docker/.env
+      - .env
+    build:
+      context: ms-configuration/.
+      dockerfile: Dockerfile
     ports:
-      - 8089:8089
+      - "8089:8089"
     networks:
-      - spring-network
+      - keycloak_postgre
 
-  # eureka
-  eureka-service:
+  ms-eureka:
     depends_on:
-      - config-service
-    container_name: eureka-service
+      - ms-configuration
+    container_name: ms-eureka
     image: ms-eureka-service:${version_eureka:-latest}
     restart: always
-    build:
-      context: ms-eureka/
-      dockerfile: dockerfile
-      args:
-        - CONFIG_SERVICE_URI_ARG=${IP_PROD}
-        - env_profile=${env_PROD}
     env_file:
       - .env
+    build:
+      context: ms-eureka/.
+      dockerfile: Dockerfile
+      args: # pour la construction de l'image
+        - SPRING_PROFILES_ACTIVE=${profile_actif_prod}
+        - CONFIG_SERVICE_URI=${service_config_host_prod}
     ports:
-      - 8099:8099
-    environment:
-      - SPRING_PROFILES_ACTIVE=${env_PROD}
-      - CONFIG_SERVICE_URI=${IP_PROD}
+      - "8099:8099"
+    environment: # pour la construction du conteneur
+      - SPRING_PROFILES_ACTIVE=${profile_actif_prod}
+      - CONFIG_SERVICE_URI=${service_config_docker}
     networks:
-      - spring-network
+      - keycloak_postgre
 
-  # gateway-service
-  gateway-service:
+  ms-gateway:
     depends_on:
-      - eureka-service
-    container_name: gateway-service
+      - ms-configuration
+    container_name: ms-gateway
     image: ms-gateway-service:${version_gateway:-latest}
     restart: always
-    build:
-      context: ms-gateway/
-      dockerfile: dockerfile
-      args:
-        - CONFIG_SERVICE_URI_DEV=${IP_PROD}
-        - env_profile=${env_PROD}
     env_file:
       - .env
+    build:
+      context: ms-gateway
+      dockerfile: Dockerfile
+      args: # pour la construction de l'image
+        - SPRING_PROFILES_ACTIVE=${profile_actif_prod}
+        - CONFIG_SERVICE_URI=${service_config_host_prod}
     ports:
-      - 8077:8077
-    environment:
-      - SPRING_PROFILES_ACTIVE=${env_PROD}
-      - CONFIG_SERVICE_URI=${IP_PROD}
-      - eureka.client.service-url.defaultZone=${eureka_Zone}
+      - "8077:8077"
+    environment: # pour la construction du conteneur
+      - SPRING_PROFILES_ACTIVE=${profile_actif_prod}
+      - CONFIG_SERVICE_URI=${service_config_docker}
     networks:
-      - spring-network
+      - keycloak_postgre
+  #    healthcheck: # test l'état de santé
+  #      test: [ "CMD", "curl", "-f", "http://${service_config_prod_dev}/actuator/health" ]
+  #      interval: 30s
+  #      timeout: 10s
+  #      retries: 5
 
-  # article
-  article-service:
+  ms-article:
     depends_on:
-      - eureka-service
-    container_name: article
+      - ms-configuration
+    container_name: ms-article
     restart: always
-    image: ms-article-service:${version_article-latest}
+    image: ms-article-service:${version_article:-latest}
     env_file:
       - .env
     build:
-      context: ms-article/
-      dockerfile: dockerfile
-      args:
-        - CONFIG_SERVICE_URI_ARG=${IP_PROD}
-        - env_profile=${env_PROD}
+      context: ms-article
+      dockerfile: Dockerfile
+      args: # pour la construction de l'image
+        - SPRING_PROFILES_ACTIVE=${profile_actif_prod}
+        - CONFIG_SERVICE_URI=${service_config_host_prod}
     deploy:
       replicas: 1
     ports:
-      - "0:9010"
-      # volumes:
-      # Path absolut pour l'échange des fichiers
-      #- ./$PWD TODO dossier local:/blog/images:rw
-    environment:
-      - SPRING_PROFILES_ACTIVE=${env_PROD}
-      - CONFIG_SERVICE_URI=${IP_PROD}
-      - eureka.client.service-url.defaultZone=${eureka_Zone}
+      - "9010:9010"
+    environment: # pour la construction du conteneur
+      - SPRING_PROFILES_ACTIVE=${profile_actif_prod}
+      - CONFIG_SERVICE_URI=${service_config_docker}
     networks:
-      - spring-network
+      - keycloak_postgre
+#    healthcheck: # test l'état de santé
+#      test: [ "CMD", "curl", "-f", "http://${service_config_prod_dev}/actuator/health" ]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 5
 
 networks:
   keycloak_postgre:
     name: sso_bd
-    external: true  # indic qu'il est déjà present
     driver: bridge  # Réseau docker isolé
