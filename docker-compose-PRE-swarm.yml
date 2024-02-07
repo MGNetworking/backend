@@ -1,0 +1,81 @@
+version: '3.9'
+services:
+
+  ms-configuration:
+    container_name: ms-configuration
+    image: sonatype-nexus.backhole.ovh/ms-configuration-service:${version_config:-latest}
+    restart: always
+    env_file:
+      - .env
+    build:
+      context: ms-configuration/.
+      dockerfile: Dockerfile
+    ports:
+      - "8089:8089"
+    networks:
+      - api
+
+
+  ms-eureka:
+    depends_on:
+      - ms-configuration
+    container_name: ms-eureka
+    image: sonatype-nexus.backhole.ovh/ms-eureka-service:${version_eureka:-latest}
+    restart: always
+    env_file:
+      - .env
+    build:
+      context: ms-eureka/.
+      dockerfile: Dockerfile
+      args: # pour la construction de l'image
+        - SPRING_PROFILES_ACTIVE=${profile_actif_preprod}
+        - CONFIG_SERVICE_URI_host=${service_config_host_preprod}
+    ports:
+      - "8099:8099"
+    networks:
+      - api
+
+  ms-gateway:
+    depends_on:
+      - ms-configuration
+    container_name: ms-gateway
+    image: sonatype-nexus.backhole.ovh/ms-gateway-service:${version_gateway:-latest}
+    restart: always
+    env_file:
+      - .env
+    build:
+      context: ms-gateway
+      dockerfile: Dockerfile
+      args: # pour la construction de l'image
+        - SPRING_PROFILES_ACTIVE=${profile_actif_preprod}
+        - CONFIG_SERVICE_URI_host=${service_config_host_preprod}
+    ports:
+      - "8077:8077"
+    networks:
+      - api
+
+  ms-article:
+    depends_on:
+      - ms-configuration
+    container_name: ms-article
+    restart: always
+    image: sonatype-nexus.backhole.ovh/ms-article-service:${version_article:-latest}
+    env_file:
+      - .env
+    build:
+      context: ms-article
+      dockerfile: Dockerfile
+      args: # pour la construction de l'image
+        - SPRING_PROFILES_ACTIVE=${profile_actif_preprod}
+        - CONFIG_SERVICE_URI_host=${service_config_host_preprod}
+    deploy:
+      replicas: 1
+    ports:
+      - "9010:9010"
+    networks:
+      - api
+
+networks:
+  api:
+    external: true
+    name: spring-api
