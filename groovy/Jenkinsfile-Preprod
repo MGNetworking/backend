@@ -27,7 +27,9 @@ pipeline {
                 script {
 
                     echo "Chargement du fichier .env";
-                    load('.env')
+                    def envFile = '.env'
+                    sh("cat ${envFile}")    // Affiche le contenu du fichier .env pour déboguer
+                    load(envFile)
 
                     echo "Version ms-configuration : ${version_config}";
                     echo "Version ms-eureka : ${version_eureka}";
