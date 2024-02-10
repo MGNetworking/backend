@@ -184,33 +184,31 @@ pipeline {
                 }
             }
         }
+    }
 
-
-        post {
-            always {
-                script {
-                    sh "docker logout $DOCKER_REGISTRY_URL"
-                }
-            }
-            success {
-                echo 'La mise en service à été réussi.'
-//                script {
-//                    STATUS = sh(script: "docker inspect -f '{{.State.Status}}' ${CONTAINER_NAME}", returnStdout: true)
-//                    echo "Status du conteneur ${CONTAINER_NAME} : ${STATUS} "
-//                    echo "docker logout ${DOMAIN_REGISTRY}"
-//                }
-            }
-            failure {
-
-                echo "Échec de la mise en service, Rollback en cours";
-
-                // Rollback
-//                sh "docker pull ${env.DOCKER_IMAGE_NAME}:${version_old}";
-//                sh 'docker compose -f ./docker/docker-compose-rollback.yml up -d --no-color --wait';
-//                sh "docker logout ${DOMAIN_REGISTRY}";
+    post {
+        always {
+            script {
+                sh "docker logout $DOCKER_REGISTRY_URL"
             }
         }
+        success {
+            echo 'La mise en service à été réussi.'
+            //                script {
+            //                    STATUS = sh(script: "docker inspect -f '{{.State.Status}}' ${CONTAINER_NAME}", returnStdout: true)
+            //                    echo "Status du conteneur ${CONTAINER_NAME} : ${STATUS} "
+            //                    echo "docker logout ${DOMAIN_REGISTRY}"
+            //                }
+        }
+        failure {
 
+            echo "Échec de la mise en service, Rollback en cours";
+
+            // Rollback
+            //                sh "docker pull ${env.DOCKER_IMAGE_NAME}:${version_old}";
+            //                sh 'docker compose -f ./docker/docker-compose-rollback.yml up -d --no-color --wait';
+            //                sh "docker logout ${DOMAIN_REGISTRY}";
+        }
     }
 
 }
