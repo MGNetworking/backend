@@ -188,8 +188,9 @@ pipeline {
 
         post {
             always {
-
-                sh "docker logout $DOCKER_REGISTRY_URL"
+                script {
+                    sh "docker logout $DOCKER_REGISTRY_URL"
+                }
             }
             success {
                 echo 'La mise en service à été réussi.'
