@@ -1,7 +1,7 @@
 #!/bin/bash
 
 dockerComposeSwarmSousModule="docker-compose-swarm.yml"
-dockerComposeBuild="docker-compose-DEV-swarm.yml"
+dockerComposeBuild="dc-DEV-Build-swarm.yml"
 name_conteneur=( "ms-eureka" "ms-gateway" "ms-article")
 
 docker info >/dev/null 2>&1
@@ -43,7 +43,7 @@ if [ $DOCKER_STATUS -eq 0 ]; then
 
         status="UNKNOWN"
         echo  "status du service ms-configuration : $status"
-        status=$(curl -s -m 30 http://192.168.1.68:8089/actuator/health | jq -r '.status' )
+        status=$(curl -s --max-time 30 http://192.168.1.68:8089/actuator/health | jq -r '.status' )
 
         if  [ "$status" = "UP" ]; then
           echo  "le service  ms-configuration est : $status"
