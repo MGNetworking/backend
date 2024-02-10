@@ -189,7 +189,7 @@ pipeline {
     post {
         always {
             script {
-                sh "docker logout $DOCKER_REGISTRY_URL"
+                sh "docker logout sonatype-nexus.backhole.ovh/ms-configuration-service"
             }
         }
         success {
