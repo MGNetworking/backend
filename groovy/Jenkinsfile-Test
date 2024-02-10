@@ -1,0 +1,350 @@
+pipeline {
+
+    // la connexion ssh ce faire a chaque stage automatiquement
+    // l'authentification est au regsitry est conserver dans .docker/config.json
+
+    agent any
+
+
+    environment {
+        // Définition des variables d'environnement
+        CONTAINER_NAME = "configuration"
+        DOMAIN_REGISTRY = "sonatype-nexus.backhole.ovh"
+        USER_SESSION = "max"
+        SSH_SERVER = "192.168.1.27"
+        DOCKER_IMAGE_NAME = "registry-nas.backhole.ovh/config-service"
+
+        DOCKERFILE_PATH = "./dockerfile"
+        DOCKER_COMPOSE_FILE = "./docker/docker-compose-nas.yml"
+
+        STATUS = ""
+    }
+
+    stages {
+
+        stage('Load Environment Variables') {
+            steps {
+                script {
+
+                    echo "Chargement des fichier de configuration";
+                    load('./docker/.env')
+
+                    echo "Nouvelle version de l'application : ${version}";
+                    echo "Le port externe : ${port}";
+                    echo "Le Path : ${WORKSPACE}";
+
+                }
+            }
+        }
+
+
+        stage('Authentification Docker registry') {
+            steps {
+                script {
+
+                    // Authenticate with Docker registry
+                    withCredentials([usernamePassword(credentialsId: 'nexus-credentials', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+
+                        // Action sur la machine courante
+                        sh("docker login -u $USERNAME -p $PASSWORD ${env.DOMAIN_REGISTRY}")
+                        // docker.image('registry.example.com/my-image:latest').pull()
+
+                        // docker.image("${env.DOMAIN_REGISTRY}/alpine_perso:2.0.0").pull()
+                        sh("docker pull ${env.DOMAIN_REGISTRY}/alpine_perso:2.0.0")
+
+
+                    }
+
+                }
+            }
+        }
+
+        stage('Build and Run ms-configuration') {
+            steps {
+                script {
+                    // Établir la connexion SSH
+                    sshagent(credentials: ['private-key-Preprod']) {
+                        // Faire quelque chose avec la connexion SSH
+
+                        sh "ssh $USER_SESSION@$SSH_SERVER"
+
+
+                        def result = sh(script: "docker inspect --format=\"{{.State.Status}}\" keycloak", returnStdout: true)
+                        if (result.contains("running")) {
+                            echo "Le service est en cours d'exécution."
+                        } else {
+                            echo "Le service n'est pas en cours d'exécution."
+                        }
+
+
+                    }
+                }
+            }
+        }
+
+        stage('teste') {
+            steps {
+                script {
+
+                    def result = sh(script: "docker inspect --format=\"{{.State.Status}}\" keycloak", returnStdout: true)
+
+                    if (result.contains("running")) {
+                        echo "Le service est en cours d'exécution."
+                    } else {
+                        echo "Le service n'est pas en cours d'exécution."
+                    }
+
+
+                }
+            }
+        }
+
+        stage('teste 2') {
+            steps {
+                script {
+
+                    sshagent(credentials: ['private-key-Preprod']) {
+
+                        // Authenticate with Docker registry
+                        withCredentials([usernamePassword(credentialsId: 'nexus-credentials', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+                            sh("docker login -u $USERNAME -p $PASSWORD ${env.DOMAIN_REGISTRY}")
+                            docker.image("${env.DOMAIN_REGISTRY}/postgre_perso:2.0.0").pull()
+                            sh("docker pull ${env.DOMAIN_REGISTRY}/jenkins_ops:2.0.0")
+
+                        }
+                        // Authenticate with Docker registry Vers Preprod
+                        withCredentials([usernamePassword(credentialsId: 'nexus-credentials', passwordVariable: 'PASSWORD', usernameVariable: 'USERNAME')]) {
+
+                            // exécution des commandes entre le depot est le serveur
+                            sh """
+                            ssh $USER_SESSION@$SSH_SERVER '
+                                docker login -u $USERNAME -p $PASSWORD ${env.DOMAIN_REGISTRY};
+                                docker pull ${env.DOMAIN_REGISTRY}/maven_perso:1.0.0
+                            '
+                            """
+                        }
+
+//                        sh """
+//                        ssh $USER_SESSION@$SSH_SERVER '
+//                            cd /home/max/docker_home &&
+//                            git clone git@github.com:MGNetworking/ms-configuration.git &&
+//                            docker stack deploy -c docker-compose-swarm.yml stack
+//                        '
+//                        """
+
+                        sh """
+                        ssh $USER_SESSION@$SSH_SERVER '
+                            cd /home/max/docker_home/ms-configuration/ &&
+                            ./script/swarm-run.sh'
+                        """
+
+                        def status_msConfiguration = "docker service ps stack_ms-configuration --format '{{.DesiredState}}'"
+
+                        def status = sh(script: "ssh $USER_SESSION@$SSH_SERVER $status_msConfiguration " ,returnStdout: true)
+
+                        echo("status : $status")
+
+                        if (result.contains("Running")) {
+                            echo "Le service est en cours d'exécution."
+                        } else {
+                            echo "Le service n'est pas en cours d'exécution."
+                        }
+
+
+
+                    }
+                }
+            }
+        }
+
+
+        //
+        stage('Build and Run ms-configuration') {
+            steps {
+                script {
+                    // Établir la connexion SSH
+                    sshagent(credentials: ['private-key-Preprod']) {
+                        // Faire quelque chose avec la connexion SSH
+
+                        sh "ssh $USER_SESSION@${SSH_SERVER} "
+
+                        //def result = sh (script: "docker service ps stack_ms-configuration --format \"table {{.ID}}\\t{{.Name}}\\t{{.Node}}\\t{{.CurrentState}}\"", returnStdout: true)
+
+                        def result = sh(script: "docker inspect --format=\"{{.State.Status}}\" keycloak")
+
+                        if (result.contains("running")) {
+                            echo "Le service est en cours d'exécution."
+                        } else {
+                            echo "Le service n'est pas en cours d'exécution."
+                        }
+
+
+                        sh 'echo "Opérations nécessitant SSH"'
+
+                    }
+
+                    def remote = "user@your_remote_host"  // Remplacez par votre utilisateur et hôte distant
+                    def dockerPsCommand = 'docker service ps stack_ms-configuration --format "table {{.ID}}\\t{{.Name}}\\t{{.Node}}\\t{{.CurrentState}}"'
+
+                    // Exécution de la commande SSH directe avec sh et retourStdout: true
+                    def result = sh(script: "ssh $remote \"$dockerPsCommand\"", returnStdout: true).trim()
+
+                    // Afficher la sortie de la commande Docker
+                    echo "Sortie de la commande Docker : ${result}"
+
+                    // Maintenant, vous pouvez traiter la sortie comme nécessaire dans votre pipeline
+                    // Par exemple, vous pouvez vérifier si la sortie contient "running" pour savoir si le service est en cours d'exécution.
+                    if (result.contains("running")) {
+                        echo "Le service est en cours d'exécution."
+                    } else {
+                        echo "Le service n'est pas en cours d'exécution."
+                    }
+
+
+                    String nameVersion = "${env.DOMAIN_REGISTRY}/ms-configuration:${version_config}"
+                    String CD_dockerStatus = "docker ps --format \"{{.Names}}\" | grep ms-configuration"
+
+                    // docker service ps stack_ms-configuration --format "table {{.ID}}\t{{.Name}}\t{{.Node}}\t{{.CurrentState}}"
+                    def dockerPs = "docker service ps stack_ms-configuration --format"
+                    dockerPs += "table {{.ID}}\\t{{.Name}}\\t{{.Node}}\\t{{.CurrentState}}"
+                    def result = sshCommand remote: remote, command: dockerPs
+
+
+                    echo("Testes si le service ms-configuration en cours d'exécution")
+                    String seachPsConfiguration = sh(script: "$CD_dockerStatus", returnStdout: true).trim()
+                    echo "Run status ms-configuration : $seachPsConfiguration"
+
+                    // Si pas en cour d'exécution
+                    if (seachPsConfiguration.isEmpty()) {
+
+
+                        echo "Recherche de l'images ms-configuration sur le serveur locale";
+                        String seachImgconfiguration = sh(script: "docker images -q $nameVersion", returnStdout: true).trim()
+                        String runConfiguration = "docker run -d --name ms-configuration $nameVersion"
+
+                        // Si l'images n'est pas présente localement
+                        if (seachImgconfiguration.isEmpty()) {
+
+                            echo "Pull de l'images $nameVersion "
+                            String imgConfig = sh(script: "docker pull $nameVersion", returnStdout: true).trim()
+                            echo "Pull Status : $imgConfig"
+
+                            // Si l'images n'a pas était récupérer
+                            if (imgConfig.contains('Status: Downloaded newer image')) {
+
+                                echo "Build de l'images ms-configuration "
+                                def buildConfig = sh(script: "docker compose -f dc-PRE-Build-swarm.yml ms-configuration", returnStdout: true, returnStatus: true)
+                                echo "Build status : $buildConfig";
+
+                            } else {
+                                error("Un problème est survenu lors de la récupération de l'image $nameVersion")
+                            }
+                        }
+                        // run service
+                        def runService = sh(script: "$runConfiguration", returnStdout: true)
+                        echo("Run status : $runService")
+
+                        seachPsConfiguration = sh(script: "$CD_dockerStatus", returnStdout: true).trim()
+                        echo("Processus status ms-configuration : $seachPsConfiguration")
+
+                        if (seachPsConfiguration.isEmpty()) {
+                            error("Un problème est survenu lors de la céation du conteneur ms-configuration")
+                        }
+                    }
+                    boolean etat = false
+                    int time = 0
+
+                    // test du service actif
+                    while (!etat) {
+
+                        echo("");
+                        def status = sh(script: "curl -s --max-time 30 http://192.168.1.27:8089/actuator/health  | jq -r '.status ")
+
+                        if (status == "UP") {
+                            etat = true
+                            echo("Le service est prêt , status : $status");
+                        } else if (status == "DOWN" || time == 10) {
+                            error("Un problème est survenu sur le service ms-configuration : $status nombre d'essais : $time")
+                            break
+                        }
+
+                        sleep 300
+                        time++
+                    }
+                    assert etat == false
+                }
+            }
+        }
+
+        // Dans tout les cas , Un build de l'images
+        stage('Build ms-eureak') {
+            steps {
+                script {
+
+
+                }
+
+            }
+        }
+
+
+        stage('Build ms-Gateway') {
+            steps {
+                script {
+
+                }
+            }
+        }
+
+
+        stage('Build ms-eureak') {
+            steps {
+                script {
+
+                }
+            }
+        }
+
+        stage('Build ms-eureak') {
+            steps {
+                script {
+
+                }
+            }
+
+
+        }
+
+        post {
+            always {
+                // Déconnexion SSH après l'exécution du pipeline
+                script {
+                    sshagent(['Déconnexion SSH'])
+                    // Logout from Docker registry
+
+                }
+
+                sh "docker logout $DOCKER_REGISTRY_URL"
+            }
+            success {
+                echo 'La mise en service à été réussi.'
+                script {
+                    STATUS = sh(script: "docker inspect -f '{{.State.Status}}' ${CONTAINER_NAME}", returnStdout: true)
+                    echo "Status du conteneur ${CONTAINER_NAME} : ${STATUS} "
+                    echo "docker logout ${DOMAIN_REGISTRY}"
+                }
+            }
+            failure {
+
+                echo "Échec de la mise en service, Rollback en cours";
+
+                // Rollback
+                sh "docker pull ${env.DOCKER_IMAGE_NAME}:${version_old}";
+                sh 'docker compose -f ./docker/docker-compose-rollback.yml up -d --no-color --wait';
+                sh "docker logout ${DOMAIN_REGISTRY}";
+            }
+        }
+
+    }
+
+}
