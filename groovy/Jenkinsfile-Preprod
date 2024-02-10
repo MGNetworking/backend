@@ -36,7 +36,7 @@ pipeline {
                     echo "Version ms-gateway : ${version_gateway}";
                     echo "Version ms-article : ${version_article}";
 
-                    echo("IP serveur : ${service_config_host_preprod}")
+                    echo("IP serveur : ${service_config_host_dev}")
 
                 }
             }
