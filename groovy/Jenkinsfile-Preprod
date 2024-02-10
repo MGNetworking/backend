@@ -150,12 +150,12 @@ pipeline {
 
                             status_service = sh(script: 'curl -s --max-time 30 http://192.168.1.68:8089/actuator/health | jq -r \'.status\'', returnStdout: true).trim()
 
-                            if (status_service = "UP") {
+                            if (status_service == "UP") {
                                 echo "Le service ms-configuration est : $status_service"
                                 etat = "false"
                                 currentBuild.result == 'SUCCESS'
 
-                            } else if (status_service = "DOWN" || time == 10) {
+                            } else if (status_service == "DOWN" || time == 10) {
                                 echo "Le service ms-configuration est : $status_service "
                                 echo "Nombre d'essais réaliser : $time "
                                 currentBuild.result == 'FAILURE'
