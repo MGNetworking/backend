@@ -44,18 +44,20 @@ pipeline {
 
         stage("Git Module") {
 
-            script {
-                def init = sh("git submodule init", returnStdout: true).trim()
-                echo("Status submodule init : $init")
+            steps {
+                script {
+                    def init = sh("git submodule init", returnStdout: true).trim()
+                    echo("Status submodule init : $init")
 
-                def update = sh("git submodule update --recursive --remote", returnStdout: true).trim()
-                echo("Status submodule update : $update")
+                    def update = sh("git submodule update --recursive --remote", returnStdout: true).trim()
+                    echo("Status submodule update : $update")
 
-                // Listez les modules dans les sous-dossiers
-                def submodulesList = sh(script: "git submodule status --recursive", returnStdout: true).trim()
+                    // Listez les modules dans les sous-dossiers
+                    def submodulesList = sh(script: "git submodule status --recursive", returnStdout: true).trim()
 
-                echo ("Modules dans les sous-dossiers :")
-                echo ("${submodulesList}")
+                    echo("Modules dans les sous-dossiers :")
+                    echo("${submodulesList}")
+                }
             }
 
         }
