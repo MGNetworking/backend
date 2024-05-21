@@ -6,6 +6,7 @@
     * [Initialisation du projet](#initialisation-du-projet)
     * [Before Run](#Before-Run)
     * [Run](#run)
+    * [Add sous module Git](#)
 
 ## General info
 
@@ -195,4 +196,19 @@ sans utiliser le cache des couches d'image. Cela signifie que toutes les étapes
 partir de zéro, même si les étapes précédentes sont en cache.
 
 Dans cet exemple, je stoppe et supprime le service article, puis, je build l'image et créer le conteneur en
-utilisant le docker compose principal, qui respecter l'ordre des dépendances entre conteneur 
+utilisant le docker compose principal, qui respecter l'ordre des dépendances entre conteneur.
+
+### Add sous module Git
+
+Pour ajouter un sous-projet d'un dépôt Git en tant que submodule, vous pouvez utiliser la commande git submodule add. 
+Voici comment l'utiliser :
+
+```shell
+git submodule add <URL_du_sous_projet> <chemin_local>
+
+# Exemple depuis le dossier backend
+git submodule add https://exemple.com/sous_projet 
+```
+
+Puis vérifier le nouvelle import dans le fichier `.gitmodules`
+
