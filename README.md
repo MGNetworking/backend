@@ -1,214 +1,169 @@
-## Table of contents
+# API de Gestion des Articles avec Architecture Microservices
 
-* [General info](#general-info)
+## Sommaire
+
+* [Objectif](#objectif)
+* [Fonctionnement](#fonctionnement-)
+* [Gestion des dépendances avec Git Submodules](#gestion-des-dépendances-avec-git-submodules)
 * [Setup](#setup)
     * [Workflow](#workflow)
-    * [Initialisation du projet](#initialisation-du-projet)
-    * [Before Run](#Before-Run)
-    * [Run](#run)
-    * [Add sous module Git](#)
+* [Git Submodules](#git-submodules)
+    * [Fonctionnement des Git Submodules](#fonctionnement-des-git-submodules)
+        * [Initialisation des submodules](#initialisation-des-submodules)
+        * [Mise à jour des submodule](#mise-à-jour-des-submodule-)
+        * [Mise à jour des submodules avec des référentiels distants](#mise-à-jour-des-submodules-avec-des-référentiels-distants-)
+        * [Mise à jour du projet principal](#mise-à-jour-du-projet-principal-)
+        * [Ajout d'un sous-module au projet](#ajout-dun-sous-module-au-projet)
 
-## General info
+## Objectif
 
-Ce projet est le regroupement plusieurs sous projet Spring boot dans la forme de sous module. Ces projets sont des
-micro-services pour la gestion du blog possèdent le nom de domain : **ghoverblog**
+Ce projet consiste en une API développée avec Spring Boot, dédiée à la gestion des articles
+de [mon site internet](https://ghoverblog.ovh/). À travers ce projet, j'ai eu l'opportunité d'explorer et de mettre en
+pratique plusieurs technologies Spring,
+notamment [Spring Cloud Gateway](https://github.com/spring-cloud/spring-cloud-gateway), [Spring Cloud Config](https://github.com/spring-cloud/spring-cloud-config),
+et [Spring Cloud Netflix](https://github.com/spring-cloud/spring-cloud-netflix), afin de créer une architecture
+microservices robuste et évolutive.
+En outre, ce projet m'a permis de me familiariser avec Docker, en créant des images Docker de mes API et en les
+déployant efficacement dans un environnement Docker Swarm.
+
+## Fonctionnement
+
+Information générale sur la création des services Spring Boot et de leur déploiement dans Docker Swarm
+
+Nos services Spring Boot sont initialement développés et testés dans un environnement standard de développement. Une
+fois validés, ces services sont conteneurisés en créant des images Docker correspondantes. Ces images sont ensuite
+déployées dans un environnement Docker Swarm, où l'orchestration des conteneurs assure une gestion efficace de la mise à
+l'échelle, de la distribution des charges et de la résilience des services.
+
+## Gestion des dépendances avec Git Submodules
+
+Ce projet utilise des Git submodules pour référencer d'autres projets. Les Git submodules permettent d'intégrer des
+référentiels Git externes au sein d'un projet principal, tout en maintenant une séparation claire entre les codes
+sources. Cela facilite la gestion des dépendances et permet de synchroniser les différentes parties du projet avec leurs
+référentiels d'origine.
 
 ## Setup
 
-## Workflow
+### Workflow
 
-Ce projet est composé de sous module interdépendant. Ces modules doivent respecter un ordre de lancement.
+Pour garantir un fonctionnement optimal, nos microservices suivent un ordre d'exécution spécifique dans Docker Swarm :
 
-De plus, tous ces services fonctionnent dans un réseau docker nommé `keycloak_postgre` son alias `sso_bd`.
-La création de ce réseau est gérée par le
-projet [docker-keycloak-postgres](https://github.com/MGNetworking/docker-keycloak-postgres).
+[Spring Cloud Config](https://github.com/spring-cloud/spring-cloud-config) : Ce service est démarré en premier pour
+récupérer les propriétés de configuration stockées sur un
+dépôt GitHub. Ces configurations sont ensuite partagées avec les autres
+microservices.[info supplémentaire projet](https://spring.io/projects/spring-cloud-config)
+et [info supplémentaire documentation](https://docs.spring.io/spring-cloud-config/docs/current/reference/html/)
 
-Aussi le micro-service `article` fonction conjointement avec `Keycloak` pour la partie authentification des
-utilisateurs. En fait, les utilisateurs s'authentifient en amont (via la partie front-end du projet) puis une requête
-est effectué de manière transparente pour l'utilisateur du micro-service dans le but verifier ces droits d'accès.
+[Spring Cloud Netflix](https://github.com/spring-cloud/spring-cloud-netflix) : Après que les configurations sont en
+place, le service Eureka Discovery permet à chaque microservice de s'enregistrer dans un registre central, facilitant
+ainsi leur découverte mutuelle. [info supplémentaire](https://cloud.spring.io/spring-cloud-netflix/reference/html/)
 
-Avoir lancé au préalable les projet `docker-keycloak-postgres` puis les services dans l'ordre suivant :
+[Spring Cloud Gateway](https://github.com/spring-cloud/spring-cloud-gateway) : Ce service, qui agit comme une passerelle
+centrale, démarre ensuite. Il achemine les requêtes vers les API sous-jacentes en fonction des règles de routage
+définies. [info supplémentaire](https://spring.io/projects/spring-cloud-gateway)
 
-* `config` Ce service permet d'obtenir les configurations pour chaque sous module
+[Service Article](https://github.com/MGNetworking/ms-article/tree/eb5c7886dd15f81a3e16f75980299d62180ce8df) : Enfin, ce
+microservice, responsable de la gestion des articles de l'application, s'enregistre auprès de Eureka et devient
+accessible via le Spring Cloud Gateway. Il est également intégré avec [Keycloak](https://www.keycloak.org/) pour gérer
+l'autorisation des utilisateurs
+authentifiés. [Keycloak contrôle l'accès](https://www.keycloak.org/docs/latest/server_admin/) à certains points de
+terminaison, assurant que seules les personnes autorisées peuvent effectuer des actions spécifiques sur les articles.
 
+Cette architecture modulaire, soutenue par Docker Swarm, permet à nos applications de bénéficier d'une robustesse et
+d'une flexibilité accrues tout en maintenant une continuité avec les environnements de développement.
 
-* `eureka ` Ce service permet de référencer les services en cours execution. Il est utilisé par le service gateway.
-  Après le lancement de chaque service, ils s'inscrivent à eureka.
+## Git Submodules
 
+### Fonctionnement des Git Submodules
 
-* `gateway` Ce service est la passerelle vers les services sous-jacents. Il permet de distribuer
-  les requêtes vers les microservice inscrit par le service `eureka`
+Lors de la configuration initiale du projet, les submodules sont ajoutés en spécifiant l'URL du dépôt externe ainsi que
+le chemin dans lequel il doit être intégré. Chaque submodule pointe vers un commit spécifique du dépôt référencé,
+garantissant ainsi une cohérence entre les versions.
 
+Pour cloner un projet qui contient des submodules, il est nécessaire de suivre ces étapes :
 
-* `article` Ce service permet la gestion des articles du site.
+#### Initialisation des submodules
 
-Dans le but d'automatiser les processus de lancement, le `docker compose` supervise l'ordonnancement du projet en
-utilisant le mot clef `depends_on`.
-
-Aussi un script `run.sh` est prévu à cet effet. Pour avoir plus d'information sur savoir comment lancer ce script,
-veuiller vous rendre dans la partie [Before-Run](#before-run).
-
-NB : Le projet `docker-keycloak-postgres` doit impérativement être en cours d'exécution avant le lancement du docker
-compose
-
-### Initialisation du projet
-
-Ce projet ne contient directement tous les dossiers comment dans un projet ordinaire. Il est géré avec les sous module
-git, ce qui veut dire que vous devez initialiser puis les metres a jours dans le context du projet principal.
-
-Pour cela, vous suivre les commande suivante :
+Une fois le projet cloné, vous devez initialiser les submodules avec la commande `git submodule init`. Cela configure
+les submodules en fonction de la configuration du projet principal.
 
 ```shell
 git submodule init
 ```
 
-Cette commande est utilisée pour initialiser les sous-modules d'un référentiel Git
-Lorsque vous exécutez cette commande, Git recherche les informations des sous-modules
-dans le fichier `.gitmodules` du référentiel principal.
+#### Mise à jour des submodule
 
-Elle configure les sous-modules enregistrés dans le fichier `.gitmodules` pour être suivis
-et utilisés dans le référentiel principal.
-
-Cependant, elle ne récupère pas automatiquement les fichiers des sous-modules.
-C'est pourquoi vous devez également exécuter la commande `git submodule update` pour obtenir les fichiers réels des
-sous-modules.
-
-```shell
-git submodule update --recursive --remote
-```
-
-Cette commande met à jour tous les sous-modules du projet vers les derniers commits de leur branche par défaut dans le
-référentiel distant.
-
-L'option `--recursive` est utilisée pour mettre à jour tous les sous-modules récursivement.
-L'option `--remote` indique à Git de récupérer les derniers commits du référentiel distant plutôt que de rester sur les
-commits spécifiés dans le fichier `.gitmodules`
+Pour récupérer le contenu des submodules, vous utilisez la commande `git submodule
+   update`. Cette commande clone les référentiels des submodules dans les chemins spécifiés et les synchronise avec les
+versions définies.
 
 ```shell
 git submodule update
 ```
 
-Cette commande met à jour tous les sous-modules du projet vers les commits spécifiés dans le fichier `.gitmodules`.
-Elle ne récupère pas automatiquement les derniers commits du référentiel distant.
+#### Mise à jour des submodules avec des référentiels distants
+
+Pour mettre à jour tous les submodules en suivant les branches distantes plutôt que les commits fixes, vous pouvez
+utiliser la commande :
+
+```shell
+git submodule update --recursive --remote
+```
+
+Cette commande a deux options importantes :
+
+L'option `--recursive`:  
+Elle permet de mettre à jour les submodules de manière récursive, c'est-à-dire que si un submodule
+contient lui-même des submodules, ceux-ci seront également mis à jour.
+
+L'option `--remote` :  
+Cette option force Git à récupérer les dernières modifications depuis les branches distantes spécifiées
+dans chaque submodule, plutôt que de se contenter des versions fixées dans le projet principal.
+
+Cette commande est particulièrement utile pour maintenir à jour les submodules qui sont en développement actif, en
+s'assurant qu'ils suivent les branches distantes les plus récentes.
+
+À chaque mise à jour du projet principal ou des submodules, il est essentiel de synchroniser les submodules pour
+s'assurer que tous les éléments du projet fonctionnent correctement ensemble.
+
+#### Mise à jour du projet principal
+
+Une fois les submodules mis à jour, vous pouvez synchroniser le projet principal
+avec son dépôt distant en utilisant la commande `git pull origin master`. Cette commande fusionne les dernières
+modifications de la branche master du dépôt distant dans votre copie locale du projet. Cela garantit que votre
+environnement de travail est à jour avec les derniers changements apportés au projet principal.
 
 ```shell
 git pull origin master
 ```
 
-Cette commande met à jour le répertoire principal en récupérant les modifications de la branche `master` du référentiel
-distant du répertoire principal.
+#### Ajout d'un sous-module au projet
 
-Si vous avez mis à jour vos sous-modules avec `git submodule update --recursive --remote` et que vous avez effectué des
-modifications dans le répertoire principal. Vous pouvez envisager d'effectuer un `git pull origin master` pour récupérer
-les dernières modifications de la branche "master" du référentiel distant du répertoire principal.
+Pour ajouter un sous-module à votre projet Git, suivez ces étapes :
 
-### Before-Run
+1. **Ajout du sous-module** :
 
-Le script `run.sh` est le script de lancement du projet, il lance d'autre script en cascade permettent la bonne
-exécution du projet. Certain de ces scripts sont exécutables avec le `Shell git`, Mais pas tous.
+Utilisez la commande suivante pour ajouter un sous-module à votre projet :
 
-Par exemple le script `version.sh`, il a besoin d'installer l'utilitaire `xmlstarlet` qui fonctionne sur
-uniquement dans les environnements `linux`.
+````shell
+git submodule add <URL-du-dépôt> <chemin-du-sous-module>
+````
 
-### Run
+- `<URL-du-dépôt>` : L'URL du dépôt Git que vous souhaitez ajouter comme sous-module.
+- `<chemin-du-sous-module>` : Le chemin où vous voulez placer le sous-module dans votre projet. Ce chemin sera un
+  répertoire contenant le code du sous-module.
 
-Les scripts exécutés par `run.sh` pour fonctionner ont besoin des tools suivant :
+Par exemple, pour ajouter un dépôt externe nommé `lib-example` dans un répertoire `libs/lib-example`, vous utiliseriez :
 
-```shell
-sudo apt install xmlstarlet
-sudo apt install net-tools
-```
+````shell
+git submodule add https://github.com/example/lib-example.git libs/lib-example
+````
 
-`xmlstarlet`est une boîte à outils en ligne de commande qui permet de traiter des documents XML de manière
-variée. Il peut être utilisé pour extraire des informations, manipuler et éditer des fichiers XML.
-Il est utilisé dans le script `version.sh`
+2. **Validation de l'ajout** :  
+   Après avoir ajouté le sous-module, vous devez valider les modifications apportées à votre projet principal avec la
+   commande suivante :
 
-`net-tools` est un ensemble d'outils en ligne de commande qui fournit diverses informations réseau. Cela inclut des
-commandes comme `ifconfig` pour configurer les interfaces réseau, netstat pour afficher les connexions réseau, et
-d'autres
-outils utiles. Il est utilisé dans le script `Get_IP_Config_Service.sh`
-
-Rendre tous les scripts exécutables :
-
-```shell
-chmod -R +x script/
-```
-
-Pour lancer le docker compose principale, vous devez utiliser le script `run.sh` Ce script contient le processus complet
-permettent d'initialiser les variables contenus dans le fichier `.env` situé à la racine du projet.
-
-Il permet aussi de déterminer l'IP local de la machine dans le but de localiser les micro-services de configuration et
-de registre (eureka).
-
-Il permet aussi de récupérer les versions des micro services pour la création des images
-
-Comment lancer ce script, voici un exemple avec l'environnement de développement :
-
-```shell
-./script/run.sh IP_DEV
-```
-
-Le paramètre `IP_DEV` correspond à l'environnement de développement utilisé dans le script. Elle permet aussi,
-de faire référence à une variable contenue dans le fichier `.env` qui participe l'exécution du script.
-
-`IP_DEV` : pour l'environnement de développement  
-`IP_PRE` : pour l'environnement de pré-production  
-`IP_PROD` : pour l'environnement de production
-
-Pour l'arrêt complet des services lancer par le docker compose principal. Ce script supprimera les conteneurs est leur
-image respective.
-
-```shell
-./script/down.sh 
-```
-
-Pour arrêter un service `de manière distinct` qui a été lancé avec le `docker compose` principale
-
-```shell
-docker compose -f docker-compose-DEV.yml stop article
-```
-
-Puis pour le supprimer
-
-```shell
-docker compose -f docker-compose-DEV.yml rm -s -f article
-```
-
-`les options`   
-Dans cette commande, `l'option -s` est utilisée pour arrêter le service avant de le supprimer, et `l'option -f` force la
-suppression du service même s'il est en cours d'exécution.
-
-Si vous avez arrêté le service `article` et que vous souhaitez le redémarrer en reconstruisant l'image, vous pouvez
-utiliser la commande docker compose up avec la sous commande `build` pour forcer la reconstruction de l'image.
-Voici comment vous pouvez le faire :
-
-```shell
-# build 
-docker compose -f docker-compose-DEV.yml build --no-cache article
-
-# puis run
-docker compose -f docker-compose-DEV.yml up -d article
-```
-
-`les options`
-l'option `--no-cache` dans la commande de construction (docker compose build) est utilisée pour forcer la reconstruction
-sans utiliser le cache des couches d'image. Cela signifie que toutes les étapes de construction seront exécutées à
-partir de zéro, même si les étapes précédentes sont en cache.
-
-Dans cet exemple, je stoppe et supprime le service article, puis, je build l'image et créer le conteneur en
-utilisant le docker compose principal, qui respecter l'ordre des dépendances entre conteneur.
-
-### Add sous module Git
-
-Pour ajouter un sous-projet d'un dépôt Git en tant que submodule, vous pouvez utiliser la commande git submodule add. 
-Voici comment l'utiliser :
-
-```shell
-git submodule add <URL_du_sous_projet> <chemin_local>
-
-# Exemple depuis le dossier backend
-git submodule add https://exemple.com/sous_projet 
-```
-
-Puis vérifier le nouvelle import dans le fichier `.gitmodules`
+````shell
+git commit -m "Ajout du sous-module lib-example"
+````
 
